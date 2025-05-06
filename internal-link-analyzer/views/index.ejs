@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Link Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-link text-blue-600 mr-2"></i>
+                Internal Link Analyzer
+            </h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                Analyze your website's internal linking structure and discover opportunities to improve your site's SEO and user experience.
+            </p>
+        </header>
+
+        <!-- URL Input Form -->
+        <form action="/analyze" method="POST" class="max-w-xl mx-auto mb-12">
+            <div class="flex gap-4">
+                <input 
+                    type="url" 
+                    name="url" 
+                    required
+                    placeholder="Enter website URL (e.g., https://example.com)"
+                    class="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                <button 
+                    type="submit"
+                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                    <i class="fas fa-search mr-2"></i>
+                    Analyze
+                </button>
+            </div>
+        </form>
+
+        <% if (error) { %>
+            <div class="max-w-xl mx-auto p-4 bg-red-100 border border-red-200 rounded-lg mb-8">
+                <p class="text-red-700"><i class="fas fa-exclamation-circle mr-2"></i><%= error %></p>
+            </div>
+        <% } %>
+
+        <% if (results) { %>
+            <!-- Results Tabs -->
+            <div class="mb-8" x-data="{ activeTab: 'suggestions' }">
+                <div class="border-b border-gray-200">
+                    <nav class="flex space-x-8">
+                        <button 
+                            @click="activeTab = 'suggestions'"
+                            :class="{'border-b-2 border-blue-500 text-blue-600': activeTab === 'suggestions'}"
+                            class="py-4 px-1 font-medium text-sm hover:text-blue-600 transition-colors"
+                        >
+                            <i class="fas fa-lightbulb mr-2"></i>
+                            Link Suggestions
+                        </button>
+                        <button 
+                            @click="activeTab = 'orphans'"
+                            :class="{'border-b-2 border-blue-500 text-blue-600': activeTab === 'orphans'}"
+                            class="py-4 px-1 font-medium text-sm hover:text-blue-600 transition-colors"
+                        >
+                            <i class="fas fa-unlink mr-2"></i>
+                            Orphan Pages
+                        </button>
+                        <button 
+                            @click="activeTab = 'authority'"
+                            :class="{'border-b-2 border-blue-500 text-blue-600': activeTab === 'authority'}"
+                            class="py-4 px-1 font-medium text-sm hover:text-blue-600 transition-colors"
+                        >
+                            <i class="fas fa-chart-line mr-2"></i>
+                            Page Authority
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Suggestions Tab -->
+                <div x-show="activeTab === 'suggestions'" class="mt-6">
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source Page</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suggested Link</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <% results.suggestions.forEach(suggestion => { %>
+                                        <tr>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm">
+                                                    <div class="font-medium text-gray-900"><%= suggestion.sourceTitle %></div>
+                                                    <div class="text-gray-500"><%= suggestion.sourcePage %></div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm">
+                                                    <div class="font-medium text-gray-900"><%= suggestion.targetTitle %></div>
+                                                    <div class="text-blue-600"><%= suggestion.suggestedAnchor %></div>
+                                                    <div class="text-gray-500"><%= suggestion.targetPage %></div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900">
+                                                    <%= (suggestion.priority * 100).toFixed(1) %>%
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm">
+                                                    <% if (suggestion.targetIsOrphan) { %>
+                                                        <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded">Orphan</span>
+                                                    <% } %>
+                                                    <% if (suggestion.sourceLowOutbound) { %>
+                                                        <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded">Low Outbound</span>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orphan Pages Tab -->
+                <div x-show="activeTab === 'orphans'" class="mt-6">
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outbound Links</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <% results.orphanPages.forEach(page => { %>
+                                        <tr>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm">
+                                                    <div class="font-medium text-gray-900"><%= page.title %></div>
+                                                    <div class="text-gray-500"><%= page.url %></div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900"><%= page.outboundCount %></div>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authority Tab -->
+                <div x-show="activeTab === 'authority'" class="mt-6">
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Authority Score</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Links</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <% results.authorityScores.slice(0, 10).forEach(page => { %>
+                                        <tr>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm">
+                                                    <div class="font-medium text-gray-900"><%= page.title %></div>
+                                                    <div class="text-gray-500"><%= page.url %></div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900"><%= (page.score * 100).toFixed(1) %>%</div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm">
+                                                    <span class="text-green-600">In: <%= page.inboundCount %></span>
+                                                    <span class="text-gray-400 mx-1">|</span>
+                                                    <span class="text-blue-600">Out: <%= page.outboundCount %></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Button -->
+            <div class="text-center">
+                <form action="/export-csv" method="GET" class="inline-block">
+                    <input type="hidden" name="data" value="<%= JSON.stringify(results) %>">
+                    <button 
+                        type="submit"
+                        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                    >
+                        <i class="fas fa-download mr-2"></i>
+                        Export CSV Report
+                    </button>
+                </form>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Alpine.js for tabs -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>
